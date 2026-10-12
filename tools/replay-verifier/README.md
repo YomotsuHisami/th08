@@ -1,96 +1,18 @@
 # TH08 Replay Verifier
 
-This is the title-owned TH08 logic regression tester. Published, content-addressed
-original-JIT traces live in `golden/`; ordinary checks run only the current
-diagnostic Browser Runtime and do not require the retail executable or the
-historical oracle workspace.
+本适配器使用锁定 common 的逐步状态比较和原版基准文件。普通检查运行当前候选，不自动替换 `golden/` 中的独立原版 trace。
 
-The supported lanes are:
+从本游戏根目录执行：
 
-- `quick`: all four title Demos, intended for frequent development checks;
-- `daily`: the complete Magic Team Lunatic Final B and Extra Replays;
-- advanced oracle capture: explicitly regenerate source traces from the retail
-  JIT environment. It never updates the published golden set automatically.
-
-Verify that the checked-in golden set is intact:
-
-```powershell
+```text
 node tools/replay-verifier/verify-golden.mjs
-```
-
-The repository does not redistribute `.rpy` files. Fetch the two public long
-fixtures from the provenance URLs in `corpus.json` and verify their hashes with:
-
-```powershell
 node tools/replay-verifier/fetch-fixtures.mjs
-```
-
-After building, packaging and serving the Presentation Lab diagnostic profile,
-run the quick lane:
-
-```powershell
 python tools/replay-verifier/capture-current-demos.py
-node tools/replay-verifier/run-current-candidate-gate.mjs `
-  --capture-root artifacts\replay-verifier\current-demo `
-  --report artifacts\replay-verifier\quick-result.json
+node tools/replay-verifier/run-current-candidate-gate.mjs --capture-root artifacts/replay-verifier/current-demo --report artifacts/replay-verifier/quick-result.json
 ```
 
-The daily lane consumes `lunatic.json` and `extra.json` plus their sibling row
-streams from one capture directory:
+日常长 Replay 使用 `capture-current-replay.py` 生成当前候选，再执行 `run-daily-gate.mjs --capture-root DIRECTORY --report FILE`。所需 Runtime、原版资源及语料以入口检查为准；语料哈希只证明取得相同输入，不证明游戏逻辑。
 
-```powershell
-python tools/replay-verifier/capture-current-replay.py `
-  --replay tools\replay-verifier\fixtures\original\th8_ud2bec.rpy `
-  --start-stage 0 --output artifacts\replay-verifier\daily\lunatic.json
-python tools/replay-verifier/capture-current-replay.py `
-  --replay tools\replay-verifier\fixtures\original\th8_ud2bf9.rpy `
-  --start-stage 8 --output artifacts\replay-verifier\daily\extra.json
-node tools/replay-verifier/run-daily-gate.mjs `
-  --capture-root artifacts\replay-verifier\daily `
-  --report artifacts\replay-verifier\daily-result.json
-```
+原版 JIT 捕获为独立维护操作，需要匹配原版环境。本轮没有重跑或更新 golden。阶段、tick、缺失记录和终止必须严格对齐，不能裁剪结果让比较通过。
 
-Both gates verify every compressed golden asset against `golden/manifest.json`
-before comparison. A candidate build cannot write or bless expected data.
-
-## Advanced oracle maintenance
-
-Pass `--oracle-root` to the quick gate to compare directly with the historical
-source artifacts. Ordinary long Replay capture uses:
-
-Run `portable/presentation-lab/prepare.py`, build/package the TH08 Presentation
-Lab profile, and start `portable/presentation-lab/serve.mjs` first. The capture
-emits a Replay tick only when calculation finishes with gameplay still owning
-both the active and requested scene. This excludes the browser shell's
-draw/present after a calculation-chain `Break` requests a scene transition;
-the original executable has no such half-transaction because its logic and
-Present boundary are integrated.
-
-The gate does not trim the candidate to the oracle length or Replay input
-bounds. Extra, missing, or incomplete candidate ticks remain comparison
-failures.
-
-```powershell
-node tools/replay-verifier/capture-original-replay.mjs --replay <file> --start-stage <0-or-8> --output <original.json>
-```
-
-Golden changes require review of the Replay hash, original executable/resource
-identity, completion evidence, tick count and compressed asset SHA-256. Do not
-copy candidate output into `golden/`.
-
-Each provider appends raw rows to a sibling `.rows.jsonl` while it runs, so a
-timeout or crash retains the completed prefix. `--max-ticks` on the comparator
-is a diagnostic prefix check and deliberately ends as `INCOMPLETE`; only two
-complete captures can produce `PASS`. Contiguous stages become separate trace
-segments. Raw Present observations are retained, but the common trace contains
-only rows where the gameplay clock advances. Retail and the fixed-tick browser
-driver have different Present cadence while that clock is frozen; any RNG
-consumed there remains observable at the next gameplay tick. The adapter also
-removes only `game_flags & 0x800`, because that bit records the dialogue route
-already represented by the observed Replay stage and imported stages bypass
-the original dialogue selection. All other flags stay authoritative.
-
-The browser collector validates the complete ordered stage list and the final
-score stored in the Replay before accepting a capture as complete. It runs only
-the isolated diagnostic build and does not modify normal gameplay or the
-built-in Demo rotation.
+比较范围是适配器声明的状态，不代表全内存、呈现、音频和浏览器文件系统。差异报告保留原始输入和版本；候选输出不能复制为原版基准。

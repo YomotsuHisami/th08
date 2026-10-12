@@ -1,82 +1,31 @@
-This repo is uploaded on behalf of [@SteinsGateON](https://space.bilibili.com/34714121).
+# TH08 永夜抄
 
-# TH08 portable
+[English](README.en.md) · [维护指南](docs/MAINTENANCE.md)
 
-This repository contains the source-only TH08 3.4.0 C++/SDL3 portable and Web implementation.
+本仓库维护《永夜抄》的 C++/SDL Runtime 及作品适配，作为 eagler-touhou 根目录 Git 子模块保留独立提交历史。游戏状态和原版文件语义由本仓库拥有；Web 启动器和站点交付由主项目 `launcher/web/` 拥有。
 
-## Layout
+## 构建
 
-- `th08_web/`: TH08 game, SDL runtime, documentation, and source tests.
-- `th10_web/launcher/`: the shared Eagler Touhou launcher and browser package subsystem used by TH08.
-- `portable/`: shared GLES renderer, numeric compatibility code, input code, build orchestration, and validation tools.
-- `tools/`: the pinned Emscripten installer and its metadata.
+作为主项目子模块使用时，从 eagler-touhou 根目录执行：
 
-## Build
-
-Install the pinned toolchain, then build the browser runtime:
-
-```powershell
-python tools/download-emscripten.py
-node portable/build.mjs --th08
+```text
+npm run dependencies -- init th08
+npm run runtime -- th08 --emsdk "<SDK>" --font-root "<字体目录>"
 ```
 
-Build outputs are written below `th08_web/artifacts/` and are intentionally not tracked.
+主项目入口读取实际构建声明，不自动创建 worktree。具体输入及普通/多人选择见[Runtime 构建指南](https://github.com/YomotsuHisami/eagler-touhou/blob/main/docs/playbooks/runtime-build.md)。
 
-## Presentation Lab
+## 当前证据
 
-[Presentation Lab](portable/presentation-lab/README.md) is the supported
-diagnostic workbench for TH08 high-refresh presentation. It provides fixed-tick
-stepping, draw-only alpha inspection, fast Replay traversal and bounded evidence
-reports while keeping its instrumented WASM outside the production package.
+2026-10 工程整理：普通源码构建、目录 Runtime 打包与验证通过；本轮未重跑多人分支和全流程游玩。 这些结果不代表所有关卡、机体、设备和模式均已完成验收。后续修改需要在本次声明之外补充受影响的实际行为验证。
 
-Run the normal source gate after presentation changes:
+## 源码与资源
 
-```powershell
-node --test portable/presentation-lab/test-analyzer.mjs
-node portable/check-high-refresh-contract.mjs
-node portable/check-presentation-purity.mjs
-```
+- `th08_web/cpp/game/`：作品规则、对象和生命周期。
+- `portable/`：本作使用的平台与绘制适配。
+- `third_party/eagler-common`：本作锁定的公共库版本。
+- `portable/build.mjs --th08`：实际构建入口。
 
-Build and start the isolated workbench with
-`./portable/presentation-lab/start-lab.ps1 -Build`. The script starts only the
-loopback server; it does not open a browser.
+不随源码提交原版 DATA、音乐、个人存档、Replay 或工具链。许可按各组件保留的 LICENSE/NOTICE 处理；不对原版游戏资源作统一授权声明。
 
-## Replay logic verification
-
-The [TH08 Replay verifier](tools/replay-verifier/README.md) publishes
-content-addressed original traces for a fast four-Demo gate and complete
-Lunatic/Extra daily regression. Normal checks do not require the retail
-executable; regenerating an oracle is a separate advanced maintenance task.
-
-## thprac
-
-The TH08 Runtime contains a source-level port of thprac's practice parameters and
-section patches. Enable thprac in the Eagler Touhou Launcher, enter the game's
-Practice menu, then choose a stage section, boss phase, resources, gauge, time,
-night value, familiar count, and rank. Practice Replays embed the same
-`USER`/`PRAC` parameter block (THPracParam::GetJson()) that upstream thprac
-appends for th08, so replays interchange with the desktop tool; playback
-restores the same parameters while thprac is enabled. Backspace opens the
-in-game assist panel and F1-F7 operate its controls. Matching upstream
-`th08_save_replay`, a practice run saves its Replay and `USER`/`PRAC` block
-whenever advanced mode is active, including when assists were used.
-
-Generated section tables and bytecode patch adapters are checked against the
-local `thprac` repository with:
-
-```powershell
-node portable/generate-thprac.mjs <path-to-thprac> --check
-node portable/check-th08-practice.mjs
-```
-
-The upstream checkout is explicit so worktrees and differently named local
-clones cannot silently select the wrong source. Generated files are always
-checked or written inside this repository.
-
-## Assets and licensing
-
-This repository does not include original Touhou executable, data, music, replay, or save files. A runnable package must be assembled locally from files you are legally allowed to use.
-
-## License
-
-This project is licensed under the MIT License.
+原仓库的移植来源署名：[SteinsGateON](https://space.bilibili.com/34714121)。
